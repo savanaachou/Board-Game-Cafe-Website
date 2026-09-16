@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Info - Drinks & Dice</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dongle:wght@300;400;700&display=swap" rel="stylesheet">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body>
+
+    <!-- Header -->
+    <div class="header">
+        <div class="nav-buttons">
+            <!-- Back button with dynamic user_id -->
+            <a href="{{ url_for('menu', user_id=user_id) }}" class="nav-button">Back</a>
+        </div>
+        <h1>Account Info</h1>
+    </div>
+
+    <!-- Account Information Section -->
+    <div class="box-section">
+        <div class="form-container">
+            <p><strong>ID Number:</strong> {{ user_id }}</p>
+            <p><strong>Name:</strong> {{ customer_info['customerName'] }}</p>
+            <p><strong>Email:</strong> {{ customer_info['customerEmail'] }}</p>
+            <br>
+            <a href="/" class="create-account-btn">Log Out</a>
+        </div>
+    </div>
+
+</body>
+</html>

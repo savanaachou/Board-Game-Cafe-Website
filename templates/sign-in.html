@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In - Drinks & Dice</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dongle:wght@300;400;700&display=swap" rel="stylesheet">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body>
+
+    <!-- Header -->
+    <div class="header">
+        <h1>Drinks & Dice</h1>
+    </div>
+
+    <!-- Sign-In Section -->
+    <section class="box-section">
+        <div class="form-container">
+            <h2>Sign In</h2>
+
+            <!-- Display Error Message -->
+            {% if error %}
+            <p class="error">{{ error }}</p>
+            {% endif %}
+
+            <!-- Sign-In Form -->
+            <form action="/" method="POST">
+                <div class="input-group">
+                    <label for="user-id">Enter Your ID</label>
+                    <input type="text" id="user-id" name="customer_id" placeholder="Your ID" required>
+                </div>
+
+                <button type="submit" class="btn">Sign In</button>
+            </form>
+
+            <p class="no-account-text">Don't have an account?</p>
+            <a href="/create-account" class="create-account-btn">Create Account</a>
+
+        </div>
+    </section>
+
+</body>
+
+</html>
