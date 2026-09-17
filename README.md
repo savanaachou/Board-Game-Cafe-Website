@@ -36,7 +36,18 @@ Then open `http://127.0.0.1:5000`. On first run the app creates and seeds `cafe.
 
 **Demo login:** customer ID `3`, password `dicebox2026` (or see `Customers.csv` for the other seeded accounts — all share that password). You can also just create a new account from the sign-in page.
 
+## Deployment
+
+Deployed on [Render](https://render.com)'s free tier as a standard web service:
+- Build command: `pip install -r requirements.txt`
+- Start command: `gunicorn boardGameCafe:app`
+- Environment variable: `SECRET_KEY` set to a random value (never commit this)
+
+Tables are created/seeded automatically on startup if they don't already exist (`ensure_database()` in `boardGameCafe.py`), so no manual setup step is needed after deploy.
+
+Two known trade-offs of the free tier, worth knowing if the live link feels slow: the instance spins down after 15 minutes of inactivity (first request after that takes ~30-50s to wake up), and the filesystem is ephemeral, so `cafe.db` resets to seed data on every redeploy.
+
 ## Notes
 
-- `SECRET_KEY` defaults to a hardcoded dev value; set a real environment variable before deploying anywhere public.
+- `SECRET_KEY` defaults to a hardcoded dev value locally; always set a real environment variable when deploying.
 - This started as a database-design exercise and has since been rebuilt into a standalone project — fixed several correctness bugs in the original (broken auth, un-committed writes, mismatched schema references, un-enforced foreign keys, a UI that collected reservation details it never saved).

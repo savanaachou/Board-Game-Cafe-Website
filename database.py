@@ -22,7 +22,7 @@ class database():
 
     def create_BoardGames_table(self):
         query = '''
-        CREATE TABLE BoardGames(
+        CREATE TABLE IF NOT EXISTS BoardGames(
             gameID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
             gameName VARCHAR(40),
             gameGenre VARCHAR(20),
@@ -35,7 +35,7 @@ class database():
 
     def create_MenuItems_table(self):
         query = '''
-        CREATE TABLE MenuItems(
+        CREATE TABLE IF NOT EXISTS MenuItems(
             menuItemID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
             menuItemName VARCHAR(40),
             menuItemPrice DOUBLE,
@@ -46,7 +46,7 @@ class database():
 
     def create_Customers_table(self):
         query = '''
-        CREATE TABLE Customers(
+        CREATE TABLE IF NOT EXISTS Customers(
             customerID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
             customerName VARCHAR(40),
             customerEmail VARCHAR(60),
@@ -57,7 +57,7 @@ class database():
 
     def create_Reservations_table(self):
         query = '''
-        CREATE TABLE Reservations(
+        CREATE TABLE IF NOT EXISTS Reservations(
             reservationID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
             customerID INTEGER,
             reservationDate VARCHAR(20),
@@ -70,7 +70,7 @@ class database():
 
     def create_BoardGameOrders_table(self):
         query = '''
-        CREATE TABLE BoardGameOrders(
+        CREATE TABLE IF NOT EXISTS BoardGameOrders(
             boardGameOrderID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
             reservationID INTEGER,
             gameID INTEGER,
@@ -83,7 +83,7 @@ class database():
 
     def create_MenuOrders_table(self):
         query = '''
-        CREATE TABLE MenuOrders(
+        CREATE TABLE IF NOT EXISTS MenuOrders(
             menuOrderID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
             reservationID INTEGER,
             menuItemID INTEGER,

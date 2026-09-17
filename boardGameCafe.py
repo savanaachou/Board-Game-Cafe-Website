@@ -14,21 +14,10 @@ app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-me")
 db_ops = database("cafe.db")
 
 
-def login_required(view):
-    """Redirect to sign-in if there's no logged-in customer in the session."""
-    @wraps(view)
-    def wrapped(*args, **kwargs):
-        if "customer_id" not in session:
-            return redirect(url_for("sign_in"))
-        return view(*args, **kwargs)
-    return wrapped
-
-
-@app.route('/initialize', methods=['GET'])
-def initialize_database():
-    for table in ["BoardGameOrders", "MenuOrders", "Reservations", "Customers", "BoardGames", "MenuItems"]:
-        db_ops.drop_table(table)
-
+def ensure_database():
+    """Create tables if they don't exist yet and seed them if empty.
+    Safe to call on every app startup (dev server or production WSGI
+    server) since both operations are idempotent."""
     db_ops.create_Customers_table()
     db_ops.create_BoardGames_table()
     db_ops.create_MenuItems_table()
@@ -43,7 +32,33 @@ def initialize_database():
     db_ops.populate_table("BoardGameOrders", "BoardGameOrders.csv")
     db_ops.populate_table("MenuOrders", "MenuOrders.csv")
 
-    return "Database initialized and populated!"
+
+ensure_database()
+
+
+def login_required(view):
+    """Redirect to sign-in if there's no logged-in customer in the session."""
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if "customer_id" not in session:
+            return redirect(url_for("sign_in"))
+        return view(*args, **kwargs)
+    return wrapped
+
+
+@app.route('/reset-demo-data', methods=['GET'])
+def reset_demo_data():
+    # Local-dev-only reset: wipes and reseeds every table. Deliberately NOT
+    # wired up as a public route on the deployed app -- a GET request that
+    # wipes the whole database would be a real vulnerability on a live site.
+    # For local resets, just delete cafe.db and restart the app instead
+    # (see README); this function is kept for reference/CLI use only.
+    if os.environ.get("ALLOW_DB_RESET") != "1":
+        return "Not available in this environment.", 403
+    for table in ["BoardGameOrders", "MenuOrders", "Reservations", "Customers", "BoardGames", "MenuItems"]:
+        db_ops.drop_table(table)
+    ensure_database()
+    return "Database reset and reseeded."
 
 
 # ---------------------------------------------------------------------------
@@ -186,5 +201,4 @@ def account_info():
 
 
 if __name__ == "__main__":
-    initialize_database()
     app.run(debug=True)
