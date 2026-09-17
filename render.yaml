@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: drinks-and-dice
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn boardGameCafe:app
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
