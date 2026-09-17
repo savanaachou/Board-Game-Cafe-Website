@@ -7,6 +7,13 @@ class helper():
         types = [int,float,str] # order needs to be this way
         if value == '':
             return None
+        # CSV booleans arrive as the literal text TRUE/FALSE, which would
+        # otherwise be stored (and later read back) as a truthy non-empty
+        # string in both cases -- normalize to 1/0 first.
+        if value.strip().upper() == 'TRUE':
+            return 1
+        if value.strip().upper() == 'FALSE':
+            return 0
         for t in types:
             try:
                 return t(value)
@@ -14,14 +21,15 @@ class helper():
                 pass
 
     # function reads file path to clean up data file
+    # every seed CSV in this project has a header row as line 1 (column
+    # names), so it's always skipped rather than inserted as data
     @staticmethod
     def data_cleaner(path):
         with open(path,"r",encoding="utf-8") as f:
-            data = f.readlines()
-
-        data = [i.strip().split(",") for i in data]
+            data = f.readlines()[1:]
+        data = [i.strip().split(",") for i in data if i.strip()]
         data_cleaned = []
-        for row in data[:]:
+        for row in data:
             row = [helper.convert(i) for i in row]
             data_cleaned.append(tuple(row))
         return data_cleaned

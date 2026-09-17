@@ -20,8 +20,7 @@
     <!-- Header -->
     <div class="header">
         <div class="nav-buttons">
-            <!-- Back button with dynamic user_id -->
-            <a href="{{ url_for('menu', user_id=user_id) }}" class="nav-button">Back</a>
+            <a href="{{ url_for('menu') }}" class="nav-button">Back</a>
         </div>
         <h1>Account Info</h1>
     </div>
@@ -33,7 +32,7 @@
             <p><strong>Name:</strong> {{ customer_info['customerName'] }}</p>
             <p><strong>Email:</strong> {{ customer_info['customerEmail'] }}</p>
             <br>
-            <a href="/" class="create-account-btn">Log Out</a>
+            <a href="{{ url_for('logout') }}" class="create-account-btn">Log Out</a>
         </div>
     </div>
 

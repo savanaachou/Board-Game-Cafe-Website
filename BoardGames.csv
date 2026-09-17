@@ -1,3 +1,4 @@
+gameName,gameGenre,MinPlayers,MaxPlayers,isAvailable
 Catan,Strategy,2,4,TRUE
 Monopoly,Family,2,6,FALSE
 Chess,Strategy,2,2,TRUE

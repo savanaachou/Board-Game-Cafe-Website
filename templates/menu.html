@@ -10,8 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Dongle:wght@300;400;700&display=swap" rel="stylesheet">
-    
-    
+
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='tabs.css') }}">
@@ -23,11 +22,11 @@
     <!-- Header -->
     <div class="header">
         <div class="nav-buttons">
-            <a href="/account-info/{{ user_id }}" class="nav-button">Account</a>
+            <a href="{{ url_for('account_info') }}" class="nav-button">Account</a>
         </div>
         <h1>Drinks & Dice</h1>
         <p class="minibody">Where fun meets flavor!</p>
-        <p id="user-id-display">User ID: {{ user_id }}</p>
+        <p id="user-id-display" data-user-id="{{ user_id }}">User ID: {{ user_id }}</p>
     </div>
 
     <div class="tab-container">
@@ -42,54 +41,18 @@
 
         <!-- Tab Content -->
 
-        <div class="tab-content active" id ="about">
+        <div class="tab-content active" id="about">
             <h2>About Us</h2>
             <p>Drinks & Dice is your go-to spot for refreshing drinks and exciting games.
             Join us to explore the world of fun and flavor!</p>
-            <h2>Developer Credits</h2>
-
+            <h2>About This Project</h2>
             <div class="card-container">
                 <div class="info-card">
-                    <p style="text-indent: 1em" ;>Annika Brown </p>
-                    <p style="text-indent: 1em" ;> Chapman University'26</p>
-                    <p style="text-indent: 1em" ;> B.S. Computer Science</p>
-                    <p style="text-indent: 1em" ;> Theatre Minor</p>
-                    <!-- Social Media Icon Buttons -->
-                    <div class="social-media-buttons">
-                        <a href="https://github.com/annibrown" class="git-button">
-                            github
-                        </a>
-                    </div>
-                    </div>
-
-                <div class="info-card">
-                    <p style="text-indent: 1em" ;>Savana Chou</p>
-                    <p style="text-indent: 1em" ;> Chapman University'26</p>
-                    <p style="text-indent: 1em" ;> B.S. Computer Science</p>
-                    <p style="text-indent: 1em" ;> Game Development Minor</p>
-                    <a href="https://github.com/savanaachou" class="git-button">
-                        github
-                    </a>
-                </div>
-                
-                <div class="info-card">
-                    <p style="text-indent: 1em" ;>Daisy Fernandez-Reyes</p>
-                    <p style="text-indent: 1em" ;> Chapman University'25</p>
-                    <p style="text-indent: 1em" ;> B.S. Software Engineering</p>
-                    <p style="text-indent: 1em" ;> Peace & Justice Studies Minor</p>
-                    <a href="https://github.com/daisyb3ll" class="git-button">
-                        github
-                    </a>
-                </div>
-                
-                <div class="info-card">
-                    <p style="text-indent: 1em" ;>Alex Lark</p>
-                    <p style="text-indent: 1em" ;> Chapman University'26</p>
-                    <p style="text-indent: 1em" ;> B.S. Data Science</p>
-                    <p style="text-indent: 1em" ;> Game Development Minor</p>
-                    <a href="https://github.com/Alex-Lark" class="git-button">
-                        github
-                    </a>
+                    <p style="text-indent: 1em">Savana Chou</p>
+                    <p style="text-indent: 1em">Chapman University '26</p>
+                    <p style="text-indent: 1em">B.S. Computer Science</p>
+                    <p style="text-indent: 1em">Game Development Minor</p>
+                    <a href="https://github.com/savanaachou" class="git-button">github</a>
                 </div>
             </div>
         </div>
@@ -102,7 +65,7 @@
                 <!-- MenuItems will be dynamically added here -->
             </div>
         </div>
-        
+
         <div class="tab-content" id="games">
             <h2>Board Games</h2>
             <p>Check out our collection of fun and engaging board games!</p>
@@ -114,46 +77,36 @@
         <div class="tab-content" id="reserve">
             <h2>Reserve A Time</h2>
             <p>Fill out the information below to make a reservation!</p>
-        
+            <p class="reservation-status" style="display: none;"></p>
 
-            <form class="reservation-form" action = "/reserve" method ="POST">
-
-                <input type="hidden" id="customer-id" name="customer_id" value="1">
+            <form class="reservation-form" action="/reserve" method="POST">
 
                 <!-- Date -->
                 <label for="reservation-date">Select a Date:</label>
                 <input type="date" id="reservation-date" name="date" required>
-        
+
                 <!-- Time -->
                 <label for="reservation-time">Select a Time:</label>
                 <input type="time" id="reservation-time" name="time" required>
-        
+
                 <!-- Guest Count -->
                 <label for="guest-count">Number of Guests:</label>
                 <input type="number" id="guest-count" name="guestCount" min="1" required>
-        
+
                 <!-- Board Game -->
-                <label for="board-game">Pick a Board Game:</label>
-                <select id="board-game" name="boardGame" required>
-                    <option value="" disabled selected>Select a game</option>
-                    <option value="catan">Catan</option>
-                    <option value="ticket-to-ride">Ticket to Ride</option>
-                    <option value="pandemic">Pandemic</option>
-                    <option value="carcassonne">Carcassonne</option>
-                    <option value="exploding-kittens">Exploding Kittens</option>
+                <label for="board-game">Pick a Board Game (Optional):</label>
+                <select id="board-game" name="boardGame">
+                    <option value="" selected>No game</option>
+                    <!-- Populated from /board-games -->
                 </select>
-        
+
                 <!-- Drink (Optional) -->
                 <label for="drink">Pick a Drink (Optional):</label>
                 <select id="drink" name="drink">
-                    <option value="" disabled selected>Select a drink</option>
-                    <option value="none">None</option>
-                    <option value="classic-boba">Classic Boba</option>
-                    <option value="strawberry-matcha">Strawberry Matcha</option>
-                    <option value="thai-tea">Thai Tea</option>
-                    <option value="taro-milk-tea">Taro Milk Tea</option>
+                    <option value="" selected>No drink</option>
+                    <!-- Populated from /view-menu -->
                 </select>
-        
+
                 <!-- Submit Button -->
                 <button type="submit" class="btn">Make Reservation</button>
             </form>
@@ -162,121 +115,166 @@
 
         <div class="tab-content" id="past-reservation">
             <h2>Past Reservations</h2>
-            <p>Here are your past reservations:</p>  
+            <p>Here are your past reservations:</p>
 
-            <!-- Past Reservation Example -->
-            <div class="reservation-item">
-                <!-- Reservations Dynamically added here -->
+            <div class="reservation-list">
+                <!-- Reservations dynamically added here -->
             </div>
-            
-            <!-- You can add more past reservations here -->
-        </div>    
+        </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const tabs = document.querySelectorAll('.tab-link');
             const contents = document.querySelectorAll('.tab-content');
+            const userId = document.getElementById('user-id-display').dataset.userId;
+
+            function loadMenuItems() {
+                return fetch('/view-menu')
+                    .then(response => response.json())
+                    .then(data => data.menuItems || []);
+            }
+
+            function loadBoardGames() {
+                return fetch('/board-games')
+                    .then(response => response.json())
+                    .then(data => data.games || []);
+            }
+
+            function renderDrinkMenu(target, items) {
+                const container = target.querySelector('.drink-menu');
+                container.innerHTML = items.length
+                    ? items.map(item => `
+                        <div class="drink-item">
+                            <h3 class="drink-name">${item[1]}</h3>
+                            <p class="drink-price">$${Number(item[2]).toFixed(2)}</p>
+                        </div>`).join('')
+                    : '<p>No menu items available.</p>';
+            }
+
+            function renderBoardGames(target, games) {
+                const container = target.querySelector('.board-games');
+                container.innerHTML = games.length
+                    ? games.map(game => `
+                        <div class="game-item">
+                            <h3 class="game-name">${game[1]}</h3>
+                            <p class="game-details">
+                                Genre: ${game[2]} | Players: ${game[3]}-${game[4]} | Available: ${game[5] ? 'Yes' : 'No'}
+                            </p>
+                        </div>`).join('')
+                    : '<p>No board games available.</p>';
+            }
+
+            function populateReserveDropdowns() {
+                loadBoardGames().then(games => {
+                    const select = document.getElementById('board-game');
+                    games.filter(g => g[5]).forEach(game => {
+                        const opt = document.createElement('option');
+                        opt.value = game[1];
+                        opt.textContent = game[1];
+                        select.appendChild(opt);
+                    });
+                });
+                loadMenuItems().then(items => {
+                    const select = document.getElementById('drink');
+                    items.forEach(item => {
+                        const opt = document.createElement('option');
+                        opt.value = item[1];
+                        opt.textContent = `${item[1]} ($${Number(item[2]).toFixed(2)})`;
+                        select.appendChild(opt);
+                    });
+                });
+            }
+            populateReserveDropdowns();
+
+            function loadReservations(target) {
+                fetch(`/reservations/${userId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const container = target.querySelector('.reservation-list');
+                        const reservations = data.reservations || [];
+                        container.innerHTML = reservations.length
+                            ? reservations.map(r => `
+                                <div class="reservation-item" data-id="${r.reservationID}">
+                                    <p><strong>Date:</strong> ${r.date}</p>
+                                    <p><strong>Time:</strong> ${r.time}</p>
+                                    <p><strong>Guests:</strong> ${r.guestCount}</p>
+                                    <p><strong>Game:</strong> ${r.game || 'None'}</p>
+                                    <p><strong>Drinks:</strong> ${r.drinks || 'None'}</p>
+                                    <p><strong>Total:</strong> $${Number(r.total).toFixed(2)}</p>
+                                    <button class="btn export-reservation-btn">Export</button>
+                                    <button class="btn delete-reservation-btn">Delete</button>
+                                </div>`).join('')
+                            : '<p>No reservations available.</p>';
+
+                        container.querySelectorAll('.delete-reservation-btn').forEach(btn => {
+                            btn.addEventListener('click', () => {
+                                const item = btn.closest('.reservation-item');
+                                fetch(`/reservations/${item.dataset.id}`, { method: 'DELETE' })
+                                    .then(response => response.json())
+                                    .then(() => loadReservations(target))
+                                    .catch(error => console.error('Error deleting reservation:', error));
+                            });
+                        });
+
+                        container.querySelectorAll('.export-reservation-btn').forEach((btn, i) => {
+                            btn.addEventListener('click', () => {
+                                const r = reservations[i];
+                                const csv = 'Date,Time,Guests,Game,Drinks,Total\n' +
+                                    `${r.date},${r.time},${r.guestCount},${r.game || ''},${r.drinks || ''},${r.total}`;
+                                const blob = new Blob([csv], { type: 'text/csv' });
+                                const link = document.createElement('a');
+                                link.href = URL.createObjectURL(blob);
+                                link.download = `reservation-${r.reservationID}.csv`;
+                                link.click();
+                            });
+                        });
+                    })
+                    .catch(error => console.error('Error fetching reservations:', error));
+            }
 
             tabs.forEach(tab => {
                 tab.addEventListener('click', function (e) {
                     e.preventDefault();
-
                     tabs.forEach(link => link.classList.remove('active'));
-
                     tab.classList.add('active');
-
                     contents.forEach(content => content.classList.remove('active'));
 
-                    const target = document.getElementById(tab.getAttribute('data-target'));
+                    const targetName = tab.getAttribute('data-target');
+                    const target = document.getElementById(targetName);
+                    target.classList.add('active');
 
-                if (tab.getAttribute('data-target') === 'menu') {
-                    fetch('/view-menu')
-                        .then(response => response.json())
-                        .then(data => {
-                            const container = target.querySelector('.drink-menu');
-                            container.innerHTML = '';
-
-                            if (data.menuItems && data.menuItems.length > 0) {
-                                data.menuItems.forEach(menuItem => {
-                                    container.innerHTML += `
-                                        <div class="drink-item">
-                                            <h3 class="drink-name">${menuItem[0]}</h3>
-                                            <p class="drink-price">$${menuItem[1]}</p>
-                                        </div>`;
-                            });
-                            } else {
-                                container.innerHTML = '<p>No menu items available.</p>';
-                            }
-                            target.classList.add('active'); // Show the tab content
-                        })
-                        .catch(error => console.error('Error fetching menuItmes:', error));
-                } else {
-                    target.classList.add('active'); // Show other tabs
-                }
-
-                if (tab.getAttribute('data-target') === 'games') {
-                    fetch('/board-games')
-                        .then(response => response.json())
-                        .then(data => {
-                        // Clear existing content and add the games
-                            const container = target.querySelector('.board-games');
-                            container.innerHTML = '';
-
-                            if (data.games && data.games.length > 0) {
-                                data.games.forEach(game => {
-                                    container.innerHTML += `
-                                        <div class="game-item">
-                                            <h3 class="game-name">${game[0]}</h3>
-                                            <p class="game-details">
-                                                Genre: ${game[1]} | Players: ${game[2]}-${game[3]} | Available: ${game[4] ? 'Yes' : 'No'}
-                                            </p>
-                                        </div>`;
-                            });
-                            } else {
-                                container.innerHTML = '<p>No board games available.</p>';
-                            }
-                            target.classList.add('active'); // Show the tab content
-                        })
-                        .catch(error => console.error('Error fetching games:', error));
-                } else {
-                    target.classList.add('active'); // Show other tabs
-                }
-
-                if (tab.getAttribute('data-target') === 'past-reservation') {
-                    const userIdElement = document.getElementById('user-id-display');
-                    const user_id = userIdElement.textContent.split(':')[1].trim();
-                    fetch('/reservations/' + user_id) //TODO: fix input
-                        .then(response => response.json())
-                        .then(data => {
-                            const container = target.querySelector('.reservation-item');
-                            container.innerHTML = '';
-                            if (data.reservations && data.reservations.length > 0) {
-                                data.reservations.forEach(reservation => {
-                                    container.innerHTML += `
-                                        <div class="reservation-item">
-                                        <p><strong>Date:</strong> ${reservation[0]}</p>
-                                        <p><strong>Time:</strong> ${reservation[1]}</p>
-                                        <p><strong>Number of Guests:</strong>${reservation[2]}</p>
-                                        <p><strong>Total Price:</strong> $${reservation[3]}</p>
-                                        <button class="btn export-reservation-btn">Export Reservation</button>
-                                        <button class="btn delete-reservation-btn">Delete Reservation</button>
-                                        </div>`;
-                            });
-                            } else {
-                                container.innerHTML = '<p>No reservations available.</p>';
-                            }
-                            target.classList.add('active'); // Show the tab content
-                        })
-                        .catch(error => console.error('Error fetching reservations:', error));
-                } else {
-                    target.classList.add('active'); // Show other tabs
-                }
-
+                    if (targetName === 'menu') {
+                        loadMenuItems().then(items => renderDrinkMenu(target, items));
+                    } else if (targetName === 'games') {
+                        loadBoardGames().then(games => renderBoardGames(target, games));
+                    } else if (targetName === 'past-reservation') {
+                        loadReservations(target);
+                    }
                 });
+            });
+
+            // Handle reservation submission via fetch so we can show inline
+            // success/error state instead of navigating away.
+            const reservationForm = document.querySelector('.reservation-form');
+            const statusEl = document.querySelector('.reservation-status');
+            reservationForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                fetch('/reserve', { method: 'POST', body: new FormData(reservationForm) })
+                    .then(response => response.json().then(data => ({ ok: response.ok, data })))
+                    .then(({ ok, data }) => {
+                        statusEl.style.display = 'block';
+                        statusEl.textContent = ok
+                            ? 'Reservation confirmed!'
+                            : (data.error || 'Something went wrong.');
+                        if (ok) reservationForm.reset();
+                    })
+                    .catch(() => {
+                        statusEl.style.display = 'block';
+                        statusEl.textContent = 'Something went wrong.';
+                    });
             });
         });
     </script>
 
 </body>
-</html>

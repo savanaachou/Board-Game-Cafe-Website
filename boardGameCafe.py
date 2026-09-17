@@ -1,29 +1,33 @@
-# imports
-from flask import Flask, render_template, request, redirect, url_for, session
-from database import database
-from helper import helper
+import os
+from functools import wraps
 
-import csv
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from werkzeug.security import generate_password_hash, check_password_hash
+
+from database import database
 
 app = Flask(__name__)
+# In production set a real SECRET_KEY env var; this fallback is fine for
+# local/demo use only.
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-me")
 
-# import csv
-# from helper import helper
-# from database import database
-
-
-# Global database object
 db_ops = database("cafe.db")
 
-# Initialize database tables
+
+def login_required(view):
+    """Redirect to sign-in if there's no logged-in customer in the session."""
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if "customer_id" not in session:
+            return redirect(url_for("sign_in"))
+        return view(*args, **kwargs)
+    return wrapped
+
+
 @app.route('/initialize', methods=['GET'])
 def initialize_database():
-    db_ops.drop_table("Customers")
-    db_ops.drop_table("BoardGames")
-    db_ops.drop_table("MenuItems")
-    db_ops.drop_table("Reservations")
-    db_ops.drop_table("BoardGameOrders")
-    db_ops.drop_table("MenuOrders")
+    for table in ["BoardGameOrders", "MenuOrders", "Reservations", "Customers", "BoardGames", "MenuItems"]:
+        db_ops.drop_table(table)
 
     db_ops.create_Customers_table()
     db_ops.create_BoardGames_table()
@@ -31,370 +35,156 @@ def initialize_database():
     db_ops.create_Reservations_table()
     db_ops.create_BoardGameOrders_table()
     db_ops.create_MenuOrders_table()
+
     db_ops.populate_table("Customers", "Customers.csv")
     db_ops.populate_table("BoardGames", "BoardGames.csv")
     db_ops.populate_table("MenuItems", "MenuItems.csv")
     db_ops.populate_table("Reservations", "Reservations.csv")
     db_ops.populate_table("BoardGameOrders", "BoardGameOrders.csv")
     db_ops.populate_table("MenuOrders", "MenuOrders.csv")
-    print ("Database initialized and populated!")
+
     return "Database initialized and populated!"
 
-@app.route('/')
-def main():
-        return render_template('sign-in.html')
 
+# ---------------------------------------------------------------------------
+# Auth
+# ---------------------------------------------------------------------------
 
-# user wants to create an account
-@app.route('/create-account', methods = ['GET','POST'])
-def create_account():
-    if request.method == 'POST':
-        new_name = request.form['name']
-        new_email = request.form['email']
-        db_ops.create_new_customer(new_name, new_email)
-        customer_id = db_ops.get_customer_id(new_name, new_email)
-        return jsonify({
-            "message": "Account created successfully!",
-            "customer_id": customer_id
-        })
-    return render_template('create-account.html')
-
-# @app.route('/reserve', methods=['POST'])
-# def make_reservation():
-#     customer_id = request.form['customer_id']
-#     reserve_date = request.form['date']
-#     reserve_time = request.form['time']
-#     guest_count = request.form['guest_count']
-
-#     # Print debug info to confirm input data
-#     print(f"Reservation received: Customer ID = {customer_id}, Date = {reserve_date}, Time = {reserve_time}, Guests = {guest_count}")
-
-#     db_ops.create_new_reservation(customer_id, reserve_date, reserve_time, guest_count)
-#     return jsonify({"message": "Reservation created successfully!"})
-
-
-    # local implementation
-    # def options():
-    #     print('''Would you like to
-    #             1. Sign In
-    #             2. Create Account
-    #             3. Exit''')
-    #     return helper.get_choice([1,2,3])
-
-    # new_name = input("Please enter your name:\n")
-    # new_email = input("Please enter you email:\n")
-    # db_ops.create_new_customer(new_name, new_email)
-    # print("Your ID is: " + str(db_ops.get_id()))
-    # print("Save this!! You will use it to log in!")
-
-
-
-
-# Sign in
 @app.route('/', methods=['GET', 'POST'])
 def sign_in():
-    print("sign in method called")
     if request.method == 'POST':
-        entered_id = request.form['customer_id']
-        IDvalidity = db_ops.check_customer_id(entered_id)
-        if IDvalidity:
-            return redirect(url_for('menu', user_id=entered_id))
-        else:
-            return render_template('sign-in.html', error="Invalid ID. Please try again!")
+        entered_id = request.form.get('customer_id', '').strip()
+        entered_password = request.form.get('password', '')
+
+        password_hash = db_ops.get_customer_password_hash(entered_id) if entered_id.isdigit() else None
+        if password_hash and check_password_hash(password_hash, entered_password):
+            session['customer_id'] = int(entered_id)
+            return redirect(url_for('menu'))
+        return render_template('sign-in.html', error="Invalid ID or password. Please try again!")
     return render_template('sign-in.html')
 
-# Sign-In Route
-# @app.route('/sign-in', methods=['POST'])
-# def sign_in():
-#     user_email = request.form['email']
-#     user_password = request.form['password']
 
-#     # Check user credentials in the database
-#     user_id = db_ops.check_user_credentials(user_email, user_password)
-#     if user_id:
-#         # Redirect to menu page with the user ID as a query parameter
-#         return redirect(url_for('menu', user_id=user_id))
-#     else:
-#         # Show an error message or redirect to the sign-in page
-#         return render_template('sign-in.html', error="Invalid credentials")
+@app.route('/create-account', methods=['GET', 'POST'])
+def create_account():
+    if request.method == 'POST':
+        name = request.form.get('userName', '').strip()
+        email = request.form.get('userEmail', '').strip()
+        password = request.form.get('userPassword', '')
 
+        if not name or not email or len(password) < 8:
+            return render_template(
+                'create-account.html',
+                error="Please fill out every field; password must be at least 8 characters."
+            )
+        if db_ops.email_in_use(email):
+            return render_template('create-account.html', error="That email is already registered.")
 
-    #local implementation: 
-    # # user wants to sign in
-    # def user_menu():
-    #     # Ask for ID and email to log in
-    #     print("What is your ID number?")
-    #     entered_id = input("ID Number: ")
-
-    # # Check to see if ID number is valid and log in
-    # IDvalidity = db_ops.check_id(entered_id)
-
-    # if IDvalidity:
-    #     signed_in = True
-    #     while signed_in:
-    #         choice = menu_options()
-    #         if choice == 1:
-    #             view_menu()
-    #         if choice == 2:
-    #             view_board_games()
-    #         if choice == 3:
-    #             make_reservation(entered_id)
-    #         if choice == 4:
-    #             view_reservations(entered_id)
-    #         if choice == 5:
-    #             account_info(entered_id)
-    # else:
-    #     print("Not a valid ID number. Try logging in with a valid one.")
-
-# options on main screen
+        customer_id = db_ops.create_new_customer(name, email, generate_password_hash(password))
+        session['customer_id'] = customer_id
+        return redirect(url_for('menu'))
+    return render_template('create-account.html')
 
 
-# User menu
-# @app.route('/menu/<customer_id>')
-# def user_menu(customer_id):
-#     return render_template('menu.html', customer_id=customer_id)
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('sign_in'))
 
-# User Menu Route
+
+# ---------------------------------------------------------------------------
+# Main app
+# ---------------------------------------------------------------------------
+
 @app.route('/menu', methods=['GET'])
+@login_required
 def menu():
-    user_id = request.args.get('user_id')
-    if user_id:
-        print(f"User ID received in menu route: {user_id}")
-        return render_template('menu.html', user_id=user_id)
-    else:
-        print("No user_id found, redirecting to sign-in")
-        return redirect(url_for('sign_in'))
-    
-# def menu_options():
-#     print('''Where would you like to go?
-#             1. Menu
-#             2. Board Games
-#             3. Reserve
-#             4. Reservations
-#             5. Account
-#         ''')
-#     return helper.get_choice([1,2,3,4.5])
+    return render_template('menu.html', user_id=session['customer_id'])
 
 
-# View menu
 @app.route('/view-menu', methods=['GET'])
+@login_required
 def view_menu():
-    menuItems = db_ops.view_menu_items()
-    menuItems_list = [list(menuItem) for menuItem in menuItems]
-    return {"menuItems": menuItems_list}
-
-# # user wants to view_menu
-# def view_menu():
-#     print("Here is a list of all our drinks!")
-#     # show the menu
-#     food_menu_query = f"""
-#     SELECT *
-#     FROM MenuItems;
-#     """
-#     items = db_ops.select_query(food_menu_query)
-#     helper.pretty_print(items)
+    menu_items = db_ops.view_menu_items()
+    return {"menuItems": [list(item) for item in menu_items]}
 
 
-# View board games
 @app.route('/board-games', methods=['GET'])
+@login_required
 def view_board_games():
     games = db_ops.view_board_games()
-    games_list = [list(game) for game in games]  # Convert rows to lists
-    return {"games": games_list}
+    return {"games": [list(game) for game in games]}
 
 
-# # user wants to view board games
-# def view_board_games():
-#     print("Here is a list of all our games!")
-#     # show board game menu
-#     game_menu_query = f"""
-#     SELECT *
-#     FROM BoardGames;
-#     """
-#     games = db_ops.select_query(game_menu_query)
-#     helper.pretty_print(games)
-
-
-# Make reservation
 @app.route('/reserve', methods=['POST'])
+@login_required
 def make_reservation():
-    print(request.form)  # Debugging
-    customer_id = request.form.get('customer_id')  # Safely get customer_id
+    customer_id = session['customer_id']
     reserve_date = request.form.get('date')
     reserve_time = request.form.get('time')
     guest_count = request.form.get('guestCount')
+    game_name = request.form.get('boardGame') or None
+    drink_name = request.form.get('drink') or None
 
-    if not all([customer_id, reserve_date, reserve_time, guest_count]):
+    if not all([reserve_date, reserve_time, guest_count]):
         return jsonify({"error": "Missing required fields"}), 400
 
-    db_ops.create_new_reservation(customer_id, reserve_date, reserve_time, guest_count)
-    return jsonify({"message": "Reservation created successfully!"})
+    reservation_id = db_ops.create_new_reservation(customer_id, reserve_date, reserve_time, guest_count)
+
+    if game_name:
+        game_id = db_ops.get_board_game_id(game_name)
+        if game_id:
+            db_ops.add_board_game_order(reservation_id, game_id)
+
+    if drink_name:
+        menu_item_id = db_ops.get_menu_item_id(drink_name)
+        if menu_item_id:
+            db_ops.add_menu_order(reservation_id, menu_item_id)
+
+    return jsonify({"message": "Reservation created successfully!", "reservationID": reservation_id})
 
 
-
-
-
-# def make_reservation(id):
-
-#     # asks for reservation date
-#     failed = True
-#     while failed:
-#         failed = False
-#         reserve_date = input("What day would you like to make a reservation? (YYYY-MM-DD)\n")
-#         if len(reserve_date) != 10:
-#             failed = True
-#         else:
-#             for i in range(len(reserve_date)):
-#                 if i == 4 or i == 7:
-#                     if reserve_date[i] != '-':
-#                         failed = True
-#                 else:
-#                     try:
-#                         int(reserve_date[i])
-#                     except:
-#                         failed = True
-#         if failed == False:
-#             if int(reserve_date[:4]) < 2024 or int(reserve_date[5:7]) > 12 or int(reserve_date[8:]) > 30:
-#                 failed = True
-#         if failed:
-#             print("Invalid entry. Please enter a valid date in the correct format (YYYY-MM-DD)")
-
-#     # asks for reservation time
-#     failed = True
-#     while failed:
-#         failed = False
-#         reserve_time = input("What time would you like your reservation to be? (##:##)\n")
-#         if len(reserve_time) != 5:
-#             failed = True
-#         else:
-#             if reserve_time[2] != ':':
-#                 failed = True
-#             else:
-#                 try:
-#                     if int(reserve_time[:2]) > 23 or int(reserve_time[3:]) > 59:
-#                         failed = True
-#                 except:
-#                     failed = True
-#         if failed:
-#             print("Invalid entry. Please enter a valid time in the correct format")
-
-#     # asks for guest number
-#     failed = True
-#     while failed:
-#         failed = False
-#         guest_amount = input("How many people will there be (including yourself)\n")
-#         try:
-#             int(guest_amount)
-#         except:
-#             failed = True
-#         if failed:
-#             print("Invalid. Please enter an integer")
-
-#     # allows them to pre-order drinks
-#     # print("Would you like to order drinks ahead of time?\n")
-#     # print('''1. Yes
-#     #          2. No
-#     #          ''')
-#     # if helper.get_choice([1,2]) == 1:
-        
-#     #print("Would you like to reserve a game?")
-#     #print("What game would you like to reserve?")
-
-#     # adds new reservation to table
-#     db_ops.create_new_reservation(id, reserve_date, reserve_time, guest_amount)
-
-# allows user to view their reservations
-
-
-# View reservations
-@app.route('/reservations/<customer_id>', methods=['GET'])
+@app.route('/reservations/<int:customer_id>', methods=['GET'])
+@login_required
 def view_reservations(customer_id):
-    print("reservations route called")
-    reservations = db_ops.view_reservations(customer_id)
-    reservations_list = [list(reservation) for reservation in reservations]
-    print("list length: " + str(len(reservations_list)))
-    return {"reservations": reservations_list}
+    # only the signed-in customer can view their own reservations
+    if customer_id != session['customer_id']:
+        return jsonify({"error": "Forbidden"}), 403
 
-# def view_reservations(id):
-#     reservations_query = f'''
-#     SELECT *
-#     FROM Reservation
-#     WHERE customerID LIKE "{id}";
-#     '''
-#     results = db_ops.select_query(reservations_query)
-#     print("Here are all of your reservations:\n")
-#     helper.pretty_print(results)
-
-    # data to be written to the csv
-    exported_file = [
-                ["menuItemName", "menuItemPrice", "itemSpecifications", "gameName"]
+    rows = db_ops.view_reservations(customer_id)
+    reservations = [
+        {
+            "reservationID": r[0],
+            "date": r[1],
+            "time": r[2],
+            "guestCount": r[3],
+            "game": r[4],
+            "drinks": r[5],
+            "total": r[6],
+        }
+        for r in rows
     ]
-    
-    # have user enter/click reservation_id of reservation they want to get info for
-    # reservation_id = (the one they entered)
-    temp_list = []
-    
-    for a in db_ops.get_reservation_details(reservation_id):
-        temp_list.append(a)
-    
-    exported_file.append(temp_list)
-    
-    file_name = 'past_reservations.csv'
-    
-    # writing data to csv
-    with open(file_name, mode='w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerows(exported_file)
-    
-    print(f"Report saved as {file_name}")
+    return {"reservations": reservations}
 
 
-#main method
+@app.route('/reservations/<int:reservation_id>', methods=['DELETE'])
+@login_required
+def delete_reservation(reservation_id):
+    deleted = db_ops.cancel_reservation(reservation_id, session['customer_id'])
+    if not deleted:
+        return jsonify({"error": "Reservation not found"}), 404
+    return jsonify({"message": "Reservation cancelled"})
 
 
-# Account info
-@app.route('/account-info/<int:user_id>')
-def account_info(user_id):
-    # Fetch customer info based on the user_id
-    customer_info = db_ops.get_customer_info_by_id(user_id+1)
-    if customer_info:
-        return render_template('account-info.html', user_id=user_id, customer_info=customer_info)
-    else:
-        # Handle case where customer is not found
+@app.route('/account-info')
+@login_required
+def account_info():
+    user_id = session['customer_id']
+    customer_info = db_ops.get_customer_info_by_id(user_id)
+    if not customer_info:
         return "Customer not found", 404
+    return render_template('account-info.html', user_id=user_id, customer_info=customer_info)
+
 
 if __name__ == "__main__":
-    print("Starting application...")
-    initialize_database()  # Call the initialization method
+    initialize_database()
     app.run(debug=True)
-
-# db_ops.create_Customers_table()
-# db_ops.create_BoardGames_table()
-# db_ops.create_MenuItems_table()
-# db_ops.create_Reservations_table()
-# db_ops.create_BoardGameOrders_table()
-# db_ops.create_MenuOrders_table()
-
-# db_ops.populate_table("Customers", "Customers.csv")
-# db_ops.populate_table("BoardGames", "BoardGames.csv")
-# db_ops.populate_table("MenuItems", "MenuItems.csv")
-# db_ops.populate_table("Reservations", "Reservations.csv")
-# db_ops.populate_table("BoardGameOrders", "BoardGameOrders.csv")
-# db_ops.populate_table("MenuOrders", "MenuOrders.csv")
-
-# #testing
-# db_ops.create_new_customer("alex", "lark@chapman.edu")
-# print(db_ops.get_customer_id("alex", "lark@chapman.edu"))
-# print(db_ops.check_customer_id("1"))
-
-# while True:
-#     user_choice = options()
-#     if user_choice == 1:
-#         user_menu()
-#     if user_choice == 2:
-#         create_account()
-#     if user_choice == 3:
-#         print("Bye bye! Come again soon!")
-#         break
-
-# db_ops.destructor()
