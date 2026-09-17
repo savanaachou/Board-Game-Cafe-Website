@@ -107,6 +107,41 @@
                     <!-- Populated from /view-menu -->
                 </select>
 
+                <!-- Drink customization -- shown only once a drink is picked -->
+                <div id="drink-customization" style="display: none;">
+                    <label for="sweetness">Sweetness:</label>
+                    <select id="sweetness" name="sweetness">
+                        <option value="100" selected>100%</option>
+                        <option value="75">75%</option>
+                        <option value="50">50%</option>
+                        <option value="25">25%</option>
+                        <option value="0">0%</option>
+                    </select>
+
+                    <label for="temperature">Temperature:</label>
+                    <select id="temperature" name="temperature">
+                        <option value="Cold" selected>Cold</option>
+                        <option value="Hot">Hot</option>
+                    </select>
+
+                    <div id="ice-level-group">
+                        <label for="ice-level">Ice Level:</label>
+                        <select id="ice-level" name="iceLevel">
+                            <option value="Normal" selected>Normal</option>
+                            <option value="Light">Light</option>
+                            <option value="None">None</option>
+                        </select>
+                    </div>
+
+                    <label>Toppings:</label>
+                    <div id="toppings-group" class="toppings-group">
+                        <!-- Populated from /toppings -->
+                    </div>
+
+                    <label for="specifications">Special Instructions (Optional):</label>
+                    <input type="text" id="specifications" name="specifications" placeholder="e.g. oat milk, extra hot">
+                </div>
+
                 <!-- Submit Button -->
                 <button type="submit" class="btn">Make Reservation</button>
             </form>
@@ -135,6 +170,12 @@
                     .then(data => data.menuItems || []);
             }
 
+            function loadToppings() {
+                return fetch('/toppings')
+                    .then(response => response.json())
+                    .then(data => data.toppings || []);
+            }
+
             function loadBoardGames() {
                 return fetch('/board-games')
                     .then(response => response.json())
@@ -146,7 +187,10 @@
                 container.innerHTML = items.length
                     ? items.map(item => `
                         <div class="drink-item">
-                            <h3 class="drink-name">${item[1]}</h3>
+                            <div>
+                                <h3 class="drink-name">${item[1]}</h3>
+                                ${item[3] ? `<p class="drink-description">${item[3]}</p>` : ''}
+                            </div>
                             <p class="drink-price">$${Number(item[2]).toFixed(2)}</p>
                         </div>`).join('')
                     : '<p>No menu items available.</p>';
@@ -184,8 +228,32 @@
                         select.appendChild(opt);
                     });
                 });
+                loadToppings().then(toppings => {
+                    const group = document.getElementById('toppings-group');
+                    group.innerHTML = toppings.map((t, i) => `
+                        <label class="topping-checkbox">
+                            <input type="checkbox" name="toppings" value="${t[1]}" id="topping-${i}">
+                            ${t[1]} (+$${Number(t[2]).toFixed(2)})
+                        </label>`).join('');
+                });
             }
             populateReserveDropdowns();
+
+            // Show/hide the customization panel based on whether a drink is
+            // picked, and hide ice level entirely when the drink is Hot.
+            const drinkSelect = document.getElementById('drink');
+            const customizationPanel = document.getElementById('drink-customization');
+            const temperatureSelect = document.getElementById('temperature');
+            const iceLevelGroup = document.getElementById('ice-level-group');
+
+            function updateIceLevelVisibility() {
+                iceLevelGroup.style.display = temperatureSelect.value === 'Cold' ? 'block' : 'none';
+            }
+            drinkSelect.addEventListener('change', () => {
+                customizationPanel.style.display = drinkSelect.value ? 'block' : 'none';
+                updateIceLevelVisibility();
+            });
+            temperatureSelect.addEventListener('change', updateIceLevelVisibility);
 
             function loadReservations(target) {
                 fetch(`/reservations/${userId}`)
@@ -194,17 +262,22 @@
                         const container = target.querySelector('.reservation-list');
                         const reservations = data.reservations || [];
                         container.innerHTML = reservations.length
-                            ? reservations.map(r => `
+                            ? reservations.map(r => {
+                                const drinkLine = r.drink
+                                    ? `${r.drink} — ${r.sweetness ?? 100}% sweet, ${r.temperature || 'Cold'}${r.temperature === 'Cold' ? ` (${r.iceLevel || 'Normal'} ice)` : ''}${r.toppings ? `, + ${r.toppings}` : ''}${r.specifications ? ` (${r.specifications})` : ''}`
+                                    : 'None';
+                                return `
                                 <div class="reservation-item" data-id="${r.reservationID}">
                                     <p><strong>Date:</strong> ${r.date}</p>
                                     <p><strong>Time:</strong> ${r.time}</p>
                                     <p><strong>Guests:</strong> ${r.guestCount}</p>
                                     <p><strong>Game:</strong> ${r.game || 'None'}</p>
-                                    <p><strong>Drinks:</strong> ${r.drinks || 'None'}</p>
+                                    <p><strong>Drink:</strong> ${drinkLine}</p>
                                     <p><strong>Total:</strong> $${Number(r.total).toFixed(2)}</p>
                                     <button class="btn export-reservation-btn">Export</button>
                                     <button class="btn delete-reservation-btn">Delete</button>
-                                </div>`).join('')
+                                </div>`;
+                            }).join('')
                             : '<p>No reservations available.</p>';
 
                         container.querySelectorAll('.delete-reservation-btn').forEach(btn => {
@@ -220,8 +293,8 @@
                         container.querySelectorAll('.export-reservation-btn').forEach((btn, i) => {
                             btn.addEventListener('click', () => {
                                 const r = reservations[i];
-                                const csv = 'Date,Time,Guests,Game,Drinks,Total\n' +
-                                    `${r.date},${r.time},${r.guestCount},${r.game || ''},${r.drinks || ''},${r.total}`;
+                                const csv = 'Date,Time,Guests,Game,Drink,Sweetness,Temperature,IceLevel,Toppings,Instructions,Total\n' +
+                                    `${r.date},${r.time},${r.guestCount},${r.game || ''},${r.drink || ''},${r.sweetness ?? ''},${r.temperature || ''},${r.iceLevel || ''},${r.toppings || ''},${r.specifications || ''},${r.total}`;
                                 const blob = new Blob([csv], { type: 'text/csv' });
                                 const link = document.createElement('a');
                                 link.href = URL.createObjectURL(blob);

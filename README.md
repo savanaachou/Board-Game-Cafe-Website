@@ -6,7 +6,7 @@ A full-stack reservation and ordering system for a fictional board game café, b
 
 - **Accounts & auth** — password-based sign-up/sign-in, with passwords hashed (scrypt via Werkzeug) rather than stored in plaintext, and session-based login state.
 - **Live board game & drink menus** — served from a normalized SQLite database, rendered client-side via fetch calls.
-- **Reservations** — booking a table also lets you reserve an available board game and pre-order a drink; both are tied to the reservation through junction tables (`BoardGameOrders`, `MenuOrders`).
+- **Reservations** — booking a table also lets you reserve an available board game and pre-order a drink; both are tied to the reservation through junction tables (`BoardGameOrders`, `MenuOrders`). Drinks are fully customizable at order time: sweetness (0-100%), hot/cold, ice level (cold only), and toppings (many-to-many via `Toppings`/`MenuOrderToppings`, so more toppings can be added later without a schema change), plus optional free-text special instructions.
 - **Cancellation** — deleting a reservation releases any board game it had reserved and cleans up its linked order rows.
 - **Relational integrity** — foreign keys are enforced (`PRAGMA foreign_keys = ON`); a customer can only view or cancel their own reservations.
 

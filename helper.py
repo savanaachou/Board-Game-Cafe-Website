@@ -1,4 +1,5 @@
 # module contains miscellaneous functions
+import csv
 
 class helper():
     # function parses a string and converts to appropriate type
@@ -22,14 +23,18 @@ class helper():
 
     # function reads file path to clean up data file
     # every seed CSV in this project has a header row as line 1 (column
-    # names), so it's always skipped rather than inserted as data
+    # names), so it's always skipped rather than inserted as data.
+    # Uses the csv module (not a naive split(",")) so quoted fields
+    # containing commas -- e.g. drink descriptions -- parse correctly.
     @staticmethod
     def data_cleaner(path):
-        with open(path,"r",encoding="utf-8") as f:
-            data = f.readlines()[1:]
-        data = [i.strip().split(",") for i in data if i.strip()]
+        with open(path, "r", encoding="utf-8", newline="") as f:
+            reader = csv.reader(f)
+            rows = list(reader)[1:]
         data_cleaned = []
-        for row in data:
+        for row in rows:
+            if not any(cell.strip() for cell in row):
+                continue
             row = [helper.convert(i) for i in row]
             data_cleaned.append(tuple(row))
         return data_cleaned

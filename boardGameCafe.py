@@ -21,13 +21,16 @@ def ensure_database():
     db_ops.create_Customers_table()
     db_ops.create_BoardGames_table()
     db_ops.create_MenuItems_table()
+    db_ops.create_Toppings_table()
     db_ops.create_Reservations_table()
     db_ops.create_BoardGameOrders_table()
     db_ops.create_MenuOrders_table()
+    db_ops.create_MenuOrderToppings_table()
 
     db_ops.populate_table("Customers", "Customers.csv")
     db_ops.populate_table("BoardGames", "BoardGames.csv")
     db_ops.populate_table("MenuItems", "MenuItems.csv")
+    db_ops.populate_table("Toppings", "Toppings.csv")
     db_ops.populate_table("Reservations", "Reservations.csv")
     db_ops.populate_table("BoardGameOrders", "BoardGameOrders.csv")
     db_ops.populate_table("MenuOrders", "MenuOrders.csv")
@@ -55,7 +58,8 @@ def reset_demo_data():
     # (see README); this function is kept for reference/CLI use only.
     if os.environ.get("ALLOW_DB_RESET") != "1":
         return "Not available in this environment.", 403
-    for table in ["BoardGameOrders", "MenuOrders", "Reservations", "Customers", "BoardGames", "MenuItems"]:
+    for table in ["MenuOrderToppings", "BoardGameOrders", "MenuOrders", "Reservations",
+                  "Customers", "BoardGames", "MenuItems", "Toppings"]:
         db_ops.drop_table(table)
     ensure_database()
     return "Database reset and reseeded."
@@ -123,6 +127,13 @@ def view_menu():
     return {"menuItems": [list(item) for item in menu_items]}
 
 
+@app.route('/toppings', methods=['GET'])
+@login_required
+def view_toppings():
+    toppings = db_ops.view_toppings()
+    return {"toppings": [list(t) for t in toppings]}
+
+
 @app.route('/board-games', methods=['GET'])
 @login_required
 def view_board_games():
@@ -153,7 +164,18 @@ def make_reservation():
     if drink_name:
         menu_item_id = db_ops.get_menu_item_id(drink_name)
         if menu_item_id:
-            db_ops.add_menu_order(reservation_id, menu_item_id)
+            sweetness = request.form.get('sweetness', type=int)
+            temperature = request.form.get('temperature') or None
+            ice_level = request.form.get('iceLevel') or None
+            specifications = request.form.get('specifications', '').strip()
+            topping_names = request.form.getlist('toppings')
+            topping_ids = [tid for tid in (db_ops.get_topping_id(name) for name in topping_names) if tid]
+
+            db_ops.add_menu_order(
+                reservation_id, menu_item_id,
+                sweetness=sweetness, temperature=temperature, ice_level=ice_level,
+                item_specifications=specifications, topping_ids=topping_ids,
+            )
 
     return jsonify({"message": "Reservation created successfully!", "reservationID": reservation_id})
 
@@ -173,8 +195,13 @@ def view_reservations(customer_id):
             "time": r[2],
             "guestCount": r[3],
             "game": r[4],
-            "drinks": r[5],
-            "total": r[6],
+            "drink": r[5],
+            "sweetness": r[6],
+            "temperature": r[7],
+            "iceLevel": r[8],
+            "specifications": r[9],
+            "toppings": r[10],
+            "total": r[11],
         }
         for r in rows
     ]

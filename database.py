@@ -39,7 +39,18 @@ class database():
             menuItemID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
             menuItemName VARCHAR(40),
             menuItemPrice DOUBLE,
-            isVegan BOOL
+            isVegan BOOL,
+            description VARCHAR(255)
+        );
+        '''
+        self.cursor.execute(query)
+
+    def create_Toppings_table(self):
+        query = '''
+        CREATE TABLE IF NOT EXISTS Toppings(
+            toppingID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            toppingName VARCHAR(40),
+            toppingPrice DOUBLE
         );
         '''
         self.cursor.execute(query)
@@ -87,9 +98,24 @@ class database():
             menuOrderID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
             reservationID INTEGER,
             menuItemID INTEGER,
-            itemSpecifications VARCHAR(40),
+            itemSpecifications VARCHAR(80),
+            sweetness INTEGER,
+            temperature VARCHAR(10),
+            iceLevel VARCHAR(10),
             FOREIGN KEY (reservationID) REFERENCES Reservations(reservationID),
             FOREIGN KEY (menuItemID) REFERENCES MenuItems(menuItemID)
+        );
+        '''
+        self.cursor.execute(query)
+
+    def create_MenuOrderToppings_table(self):
+        query = '''
+        CREATE TABLE IF NOT EXISTS MenuOrderToppings(
+            menuOrderToppingID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            menuOrderID INTEGER,
+            toppingID INTEGER,
+            FOREIGN KEY (menuOrderID) REFERENCES MenuOrders(menuOrderID),
+            FOREIGN KEY (toppingID) REFERENCES Toppings(toppingID)
         );
         '''
         self.cursor.execute(query)
@@ -185,7 +211,11 @@ class database():
         return self.cursor.execute(query).fetchall()
 
     def view_menu_items(self):
-        query = "SELECT menuItemID, menuItemName, menuItemPrice FROM MenuItems ORDER BY menuItemName;"
+        query = "SELECT menuItemID, menuItemName, menuItemPrice, description FROM MenuItems ORDER BY menuItemName;"
+        return self.cursor.execute(query).fetchall()
+
+    def view_toppings(self):
+        query = "SELECT toppingID, toppingName, toppingPrice FROM Toppings ORDER BY toppingName;"
         return self.cursor.execute(query).fetchall()
 
     def get_board_game_id(self, game_name):
@@ -197,6 +227,12 @@ class database():
     def get_menu_item_id(self, item_name):
         query = "SELECT menuItemID FROM MenuItems WHERE menuItemName = ?;"
         self.cursor.execute(query, (item_name,))
+        row = self.cursor.fetchone()
+        return row[0] if row else None
+
+    def get_topping_id(self, topping_name):
+        query = "SELECT toppingID FROM Toppings WHERE toppingName = ?;"
+        self.cursor.execute(query, (topping_name,))
         row = self.cursor.fetchone()
         return row[0] if row else None
 
@@ -225,7 +261,12 @@ class database():
         for (game_id,) in self.cursor.fetchall():
             self.cursor.execute("UPDATE BoardGames SET isAvailable = 1 WHERE gameID = ?", (game_id,))
         self.cursor.execute("DELETE FROM BoardGameOrders WHERE reservationID = ?", (reservationID,))
+
+        self.cursor.execute("SELECT menuOrderID FROM MenuOrders WHERE reservationID = ?", (reservationID,))
+        for (menu_order_id,) in self.cursor.fetchall():
+            self.cursor.execute("DELETE FROM MenuOrderToppings WHERE menuOrderID = ?", (menu_order_id,))
         self.cursor.execute("DELETE FROM MenuOrders WHERE reservationID = ?", (reservationID,))
+
         self.cursor.execute("DELETE FROM Reservations WHERE reservationID = ?", (reservationID,))
         self.connection.commit()
         return True
@@ -238,12 +279,27 @@ class database():
         self.cursor.execute("UPDATE BoardGames SET isAvailable = 0 WHERE gameID = ?", (game_id,))
         self.connection.commit()
 
-    def add_menu_order(self, reservation_id, menu_item_id, specifications=""):
+    def add_menu_order(self, reservation_id, menu_item_id, sweetness=None, temperature=None,
+                        ice_level=None, item_specifications="", topping_ids=None):
+        # ice level only makes sense for a cold drink
+        if temperature != "Cold":
+            ice_level = None
+
         self.cursor.execute(
-            "INSERT INTO MenuOrders (reservationID, menuItemID, itemSpecifications) VALUES (?, ?, ?)",
-            (reservation_id, menu_item_id, specifications),
+            '''INSERT INTO MenuOrders
+               (reservationID, menuItemID, itemSpecifications, sweetness, temperature, iceLevel)
+               VALUES (?, ?, ?, ?, ?, ?)''',
+            (reservation_id, menu_item_id, item_specifications, sweetness, temperature, ice_level),
         )
+        menu_order_id = self.cursor.lastrowid
+
+        for topping_id in (topping_ids or []):
+            self.cursor.execute(
+                "INSERT INTO MenuOrderToppings (menuOrderID, toppingID) VALUES (?, ?)",
+                (menu_order_id, topping_id),
+            )
         self.connection.commit()
+        return menu_order_id
 
     def return_board_game(self, board_game_order_id, game_id):
         self.cursor.execute(
@@ -261,15 +317,25 @@ class database():
             r.reservationTime,
             r.guestCount,
             bg.gameName,
-            GROUP_CONCAT(DISTINCT mi.menuItemName) AS drinks,
-            COALESCE(SUM(DISTINCT mi.menuItemPrice), 0) AS total
+            mi.menuItemName,
+            mo.sweetness,
+            mo.temperature,
+            mo.iceLevel,
+            mo.itemSpecifications,
+            (SELECT GROUP_CONCAT(t.toppingName) FROM MenuOrderToppings mot
+                JOIN Toppings t ON t.toppingID = mot.toppingID
+                WHERE mot.menuOrderID = mo.menuOrderID) AS toppings,
+            COALESCE(mi.menuItemPrice, 0) + COALESCE(
+                (SELECT SUM(t.toppingPrice) FROM MenuOrderToppings mot
+                    JOIN Toppings t ON t.toppingID = mot.toppingID
+                    WHERE mot.menuOrderID = mo.menuOrderID), 0
+            ) AS total
         FROM Reservations r
         LEFT JOIN BoardGameOrders bgo ON bgo.reservationID = r.reservationID
         LEFT JOIN BoardGames bg ON bg.gameID = bgo.gameID
         LEFT JOIN MenuOrders mo ON mo.reservationID = r.reservationID
         LEFT JOIN MenuItems mi ON mi.menuItemID = mo.menuItemID
         WHERE r.customerID = ?
-        GROUP BY r.reservationID
         ORDER BY r.reservationDate DESC, r.reservationTime DESC;
         '''
         self.cursor.execute(query, (customerID,))

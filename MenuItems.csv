@@ -1,6 +1,6 @@
-menuItemName,menuItemPrice,isVegan
-Classic Milk Tea,4.50,FALSE
-Taro Milk Tea,4.75,FALSE
-Strawberry Boba,5.00,TRUE
-Matcha Latte,5.25,TRUE
-Brown Sugar Boba,5.50,FALSE
+menuItemName,menuItemPrice,isVegan,description
+Classic Milk Tea,4.50,FALSE,A smooth black tea blended with creamy milk -- the tried-and-true classic.
+Taro Milk Tea,4.75,FALSE,Sweet and nutty taro flavor swirled into a silky milk tea base.
+Strawberry Milk,5.00,TRUE,Fresh strawberry puree blended with cold milk for a fruity sip.
+Matcha Latte,5.25,TRUE,Premium matcha whisked with steamed milk for a smooth earthy latte.
+Brown Sugar Milk Tea,5.50,FALSE,Black milk tea swirled with rich house-made brown sugar syrup.
