@@ -4,3 +4,6 @@ cafe.db
 .venv/
 venv/
 .DS_Store
+.pytest_cache/
+.coverage
+htmlcov/

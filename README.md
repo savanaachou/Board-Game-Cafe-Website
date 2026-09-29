@@ -1,5 +1,7 @@
 # Drinks & Dice
 
+![Tests](https://github.com/savanaachou/Board-Game-Cafe-Website/actions/workflows/tests.yml/badge.svg)
+
 A full-stack reservation and ordering system for a fictional board game café, built with Flask and SQLite. Customers can create an account, sign in, browse the board game and drink menus, make a reservation (optionally reserving a specific game and pre-ordering a drink), and view or cancel their past reservations.
 
 ## Features
@@ -22,6 +24,8 @@ database.py           All SQL: schema, seeding, queries
 helper.py              CSV parsing / type conversion for seed data
 templates/             Jinja templates (sign-in, create-account, menu, account-info)
 static/                CSS
+tests/                  pytest suite (see Testing below)
+.github/workflows/      CI: runs the test suite on every push
 *.csv                  Seed data for board games, menu items, and demo customers/reservations
 ```
 
@@ -35,6 +39,17 @@ python boardGameCafe.py
 Then open `http://127.0.0.1:5000`. On first run the app creates and seeds `cafe.db` automatically (this file is gitignored — delete it and restart the app any time to reset to seed data).
 
 **Demo login:** customer ID `3`, password `dicebox2026` (or see `Customers.csv` for the other seeded accounts — all share that password). You can also just create a new account from the sign-in page.
+
+## Testing
+
+36 tests covering auth, session handling, board game/menu endpoints, reservation creation and cancellation (including the game-availability and topping-total logic), CSV seed-data parsing, and foreign key enforcement.
+
+```bash
+pip install -r requirements-dev.txt
+pytest --cov=boardGameCafe --cov=database --cov=helper --cov-report=term-missing
+```
+
+Each test runs against its own temporary SQLite database (via the `DATABASE_PATH` environment variable), so tests never touch a real `cafe.db` and never leak state into each other. Runs automatically on every push via GitHub Actions (see `.github/workflows/tests.yml`).
 
 ## Deployment
 

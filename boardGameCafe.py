@@ -11,7 +11,7 @@ app = Flask(__name__)
 # local/demo use only.
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-me")
 
-db_ops = database("cafe.db")
+db_ops = database(os.environ.get("DATABASE_PATH", "cafe.db"))
 
 
 def ensure_database():
